@@ -1,0 +1,19 @@
+name: Prompt file checks
+
+on:
+  pull_request:
+    paths:
+      - '.github/system_prompt.txt'
+      - 'docs/prompting_system_prompt.md'
+      - 'docs/prompting.md'
+      - 'docs/runbooks/ai.md'
+
+jobs:
+  check-prompt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run system prompt checks
+        run: |
+          chmod +x .github/scripts/check-system-prompt.sh || true
+          bash .github/scripts/check-system-prompt.sh

@@ -1,0 +1,33 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+.npm/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Build outputs
+dist/
+build/
+coverage/
+*.log
+
+# Azure / IaC
+.terraform/
+*.tfstate
+*.tfstate.*
+.azure/
+
+# Local secrets
+local.settings.json
+appsettings.Development.json

@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate repo structure
+        run: bash .github/scripts/validate-repo.sh
+
+      - name: Run lint checks
+        run: bash .github/scripts/lint.sh

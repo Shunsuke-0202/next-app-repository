@@ -1,0 +1,47 @@
+name: Agents CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+
+jobs:
+  run-agents:
+    runs-on: ubuntu-latest
+    env:
+      APP_DIR: app-service
+      MAX_ATTEMPTS: 3
+      AUTO_PUSH: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/agents/*.sh || true
+
+      - name: Run PM agent
+        run: |
+          bash scripts/agents/pm_agent.sh
+
+      - name: Run Dev agent (tests + auto-fix loop)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          bash scripts/agents/dev_agent.sh
+
+      - name: Run Review agent
+        run: |
+          bash scripts/agents/review_agent.sh
