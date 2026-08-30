@@ -2,9 +2,9 @@
 """Minimal local requirement confirmation and auto-trigger flow.
 
 Usage examples:
-  python3 scripts/agents/local_auto_trigger.py --requirement "App Service のヘルスチェックを追加したい"
-  python3 scripts/agents/local_auto_trigger.py --requirement-file .github/ISSUE.md
-  TRIGGER_TOKEN=secret python3 scripts/agents/local_auto_trigger.py --requirement "..." --webhook-url http://127.0.0.1:8000/trigger
+  python3 .github/scripts/agents/local_auto_trigger.py --requirement "App Service のヘルスチェックを追加したい"
+  python3 .github/scripts/agents/local_auto_trigger.py --requirement-file .github/ISSUE.md
+  TRIGGER_TOKEN=secret python3 .github/scripts/agents/local_auto_trigger.py --requirement "..." --webhook-url http://127.0.0.1:8000/trigger
 """
 
 from __future__ import annotations
@@ -20,8 +20,20 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-AGENT_DIR = ROOT / "scripts" / "agents"
+
+def find_repo_root(start: Path | None = None) -> Path:
+    p = (start or Path(__file__)).resolve().parent
+    for _ in range(10):
+        if (p / '.git').exists() or (p / 'README.md').exists():
+            return p
+        if p.parent == p:
+            break
+        p = p.parent
+    return Path.cwd()
+
+
+ROOT = find_repo_root()
+AGENT_DIR = ROOT / ".github" / "scripts" / "agents"
 
 
 def read_requirement(args: argparse.Namespace) -> str:

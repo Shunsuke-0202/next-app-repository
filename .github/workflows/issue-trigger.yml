@@ -94,12 +94,12 @@ jobs:
       - name: Make scripts executable
         run: |
           # Bash のエージェントスクリプトを実行可能にする
-          chmod +x scripts/agents/*.sh || true
+          chmod +x .github/scripts/agents/*.sh || true
 
       - name: Run PM agent
         run: |
           # 要件整理フェーズ: .github/ISSUE.md を読み込んで artifacts/requirements.txt を生成する
-          bash scripts/agents/pm_agent.sh
+          bash .github/scripts/agents/pm_agent.sh
 
       - name: Run Dev agent (tests + auto-fix loop)
         env:
@@ -108,9 +108,9 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
           # 実装フェーズ: 依存のインストール、テスト、修正、再試行を行う
-          bash scripts/agents/dev_agent.sh
+          bash .github/scripts/agents/dev_agent.sh
 
       - name: Run Review agent
         run: |
           # 監査フェーズ: lint / build / 品質確認を行う
-          bash scripts/agents/review_agent.sh
+          bash .github/scripts/agents/review_agent.sh
