@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import {
   type Entry,
@@ -10,7 +10,26 @@ import {
   getDefaultDraft,
   formatCurrency,
   buildCategoryOptions,
+  parseVoiceCommand,
 } from "./utils";
+
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>(() => {
@@ -34,6 +53,10 @@ export default function Home() {
   const [draft, setDraft] = useState<EntryDraft>(getDefaultDraft());
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceStatus, setVoiceStatus] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -90,21 +113,35 @@ export default function Home() {
     setEditingId(null);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const applyParsedDraft = (nextDraft: Partial<EntryDraft>) => {
+    const merged = {
+      ...getDefaultDraft(),
+      ...draft,
+      ...nextDraft,
+    } as EntryDraft;
 
-    const amount = Number(draft.amount);
-    if (!draft.date || !draft.category || Number.isNaN(amount) || amount <= 0) {
-      return;
+    if (merged.category && !buildCategoryOptions(merged.type).includes(merged.category)) {
+      merged.category = buildCategoryOptions(merged.type)[0];
+    }
+
+    setDraft(merged);
+    setVoiceStatus("音声を反映しました");
+  };
+
+  const saveDraftEntry = (entryDraft: EntryDraft) => {
+    const amount = Number(entryDraft.amount);
+    if (!entryDraft.date || !entryDraft.category || Number.isNaN(amount) || amount <= 0) {
+      setVoiceStatus("日付・カテゴリ・金額を確認してください");
+      return false;
     }
 
     const nextEntry: Entry = {
       id: editingId ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: draft.date,
-      type: draft.type,
-      category: draft.category,
+      date: entryDraft.date,
+      type: entryDraft.type,
+      category: entryDraft.category,
       amount,
-      note: draft.note.trim(),
+      note: entryDraft.note.trim(),
       createdAt: new Date().toISOString(),
     };
 
@@ -114,7 +151,14 @@ export default function Home() {
       setEntries((prev) => [nextEntry, ...prev]);
     }
 
+    setVoiceStatus("家計簿に登録しました");
     resetForm();
+    return true;
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    saveDraftEntry(draft);
   };
 
   const handleEdit = (entry: Entry) => {
@@ -133,6 +177,91 @@ export default function Home() {
     if (editingId === id) {
       resetForm();
     }
+  };
+
+  const handleVoiceInput = () => {
+    const SpeechRecognitionConstructor: SpeechRecognitionConstructorLike | undefined =
+      (window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructorLike }).SpeechRecognition ||
+      (window as typeof window & { webkitSpeechRecognition?: SpeechRecognitionConstructorLike }).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionConstructor) {
+      setVoiceStatus("このブラウザは音声入力に対応していません");
+      return;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionConstructor();
+    recognition.lang = "ja-JP";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceStatus("音声認識中です...");
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceText(transcript);
+      const parsed = parseVoiceCommand(transcript);
+
+      if (!parsed.ok || !parsed.draft) {
+        setVoiceStatus(parsed.error ?? "音声を解釈できませんでした");
+        return;
+      }
+
+      const nextDraft = {
+        ...parsed.draft,
+        note: parsed.draft.note || draft.note,
+      } as EntryDraft;
+
+      applyParsedDraft(nextDraft);
+      const mergedDraft = {
+        ...getDefaultDraft(),
+        ...draft,
+        ...nextDraft,
+      } as EntryDraft;
+
+      saveDraftEntry(mergedDraft);
+      setVoiceText("");
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      setVoiceStatus("音声認識に失敗しました。もう一度お試しください");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const handleVoiceTextSubmit = () => {
+    const parsed = parseVoiceCommand(voiceText);
+    if (!parsed.ok || !parsed.draft) {
+      setVoiceStatus(parsed.error ?? "音声内容を確認してください");
+      return;
+    }
+
+    const mergedDraft = {
+      ...getDefaultDraft(),
+      ...draft,
+      ...parsed.draft,
+    } as EntryDraft;
+
+    applyParsedDraft(mergedDraft);
+    saveDraftEntry(mergedDraft);
+    setVoiceText("");
   };
 
   return (
@@ -244,7 +373,35 @@ export default function Home() {
                 />
               </label>
 
+              <div className={styles.voiceInputRow}>
+                <label className={styles.field}>
+                  <span>音声入力</span>
+                  <div className={styles.voiceInputField}>
+                    <input
+                      type="text"
+                      value={voiceText}
+                      onChange={(event) => setVoiceText(event.target.value)}
+                      placeholder="例: 食費で 1200円 使った"
+                    />
+                    <button
+                      type="button"
+                      className={`${styles.voiceButton} ${isListening ? styles.voiceButtonListening : ""}`}
+                      onClick={handleVoiceInput}
+                    >
+                      {isListening ? "停止" : "音声入力"}
+                    </button>
+                  </div>
+                </label>
+                <div className={styles.voiceHint}>例: 「食費で1200円使った」 / 「給与280000円入った」</div>
+                <div className={`${styles.voiceStatus} ${voiceStatus ? "" : styles.voiceStatusError}`}>
+                  {voiceStatus || "音声入力を使うと、何に・いくら使ったかを自動で登録できます"}
+                </div>
+              </div>
+
               <div className={styles.formActions}>
+                <button type="button" className={styles.secondaryButton} onClick={handleVoiceTextSubmit}>
+                  音声を反映
+                </button>
                 <button type="submit" className={styles.primaryButton}>
                   {editingId ? "更新する" : "追加する"}
                 </button>

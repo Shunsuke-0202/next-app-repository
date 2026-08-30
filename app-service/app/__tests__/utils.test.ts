@@ -6,6 +6,7 @@ import {
   calculateSummary,
   incomeCategories,
   expenseCategories,
+  parseVoiceCommand,
 } from "../utils";
 
 describe("Utility Functions", () => {
@@ -153,6 +154,43 @@ describe("Utility Functions", () => {
       expect(summary.income).toBe(0);
       expect(summary.expense).toBe(0);
       expect(summary.balance).toBe(0);
+    });
+  });
+
+  describe("parseVoiceCommand", () => {
+    it("parses expense commands with category and amount", () => {
+      const parsed = parseVoiceCommand("食費で 1200円 使った");
+      expect(parsed.ok).toBe(true);
+      expect(parsed.draft).toMatchObject({
+        type: "expense",
+        category: "食費",
+        amount: 1200,
+      });
+    });
+
+    it("parses income commands with salary wording", () => {
+      const parsed = parseVoiceCommand("給与 280000円 入った");
+      expect(parsed.ok).toBe(true);
+      expect(parsed.draft).toMatchObject({
+        type: "income",
+        category: "給与",
+        amount: 280000,
+      });
+    });
+
+    it("parses commands with Japan-style amount notation", () => {
+      const parsed = parseVoiceCommand("1万円使った");
+      expect(parsed.ok).toBe(true);
+      expect(parsed.draft).toMatchObject({
+        type: "expense",
+        amount: 10000,
+      });
+    });
+
+    it("returns an error for commands without an amount", () => {
+      const parsed = parseVoiceCommand("食費を使った");
+      expect(parsed.ok).toBe(false);
+      expect(parsed.error).toContain("金額");
     });
   });
 });
