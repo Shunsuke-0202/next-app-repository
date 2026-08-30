@@ -41,16 +41,16 @@ jobs:
           node-version: '20'
 
       - name: Make scripts executable
-        run: chmod +x scripts/agents/*.sh || true
+        run: chmod +x .github/scripts/agents/*.sh || true
 
       - name: Run PM agent
-        run: bash scripts/agents/pm_agent.sh
+        run: bash .github/scripts/agents/pm_agent.sh
 
       - name: Run Dev agent (tests + auto-fix loop)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-        run: bash scripts/agents/dev_agent.sh
+        run: bash .github/scripts/agents/dev_agent.sh
 
       - name: Run Review agent
-        run: bash scripts/agents/review_agent.sh
+        run: bash .github/scripts/agents/review_agent.sh

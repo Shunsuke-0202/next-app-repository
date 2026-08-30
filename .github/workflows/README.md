@@ -10,9 +10,9 @@
   - `pull_request`
   - `workflow_dispatch`（手動実行）
 - 何をしているか:
-  - `scripts/agents/pm_agent.sh` を実行して要件を整理
-  - `scripts/agents/dev_agent.sh` を実行してテストと修正ループを回す
-  - `scripts/agents/review_agent.sh` を実行してレビューを行う
+  - `.github/scripts/agents/pm_agent.sh` を実行して要件を整理
+  - `.github/scripts/agents/dev_agent.sh` を実行してテストと修正ループを回す
+  - `.github/scripts/agents/review_agent.sh` を実行してレビューを行う
 - 使いどころ:
   - 対話型エージェントの標準パイプラインを実行したいとき
   - PR / push 時に自動でレビュー・修正を走らせたいとき
@@ -24,9 +24,9 @@
   - `repository_dispatch`（`event_type: run-agents`）
   - `workflow_dispatch`（手動実行）
 - 何をしているか:
-  - `scripts/agents/pm_agent.sh` で要件を受け取る
-  - `dev_agent.sh` でテスト・修正ループを実行
-  - `review_agent.sh` で品質確認を行う
+  - `.github/scripts/agents/pm_agent.sh` で要件を受け取る
+  - `.github/scripts/agents/dev_agent.sh` でテスト・修正ループを実行
+  - `.github/scripts/agents/review_agent.sh` で品質確認を行う
 - 使いどころ:
   - 外部チャットや外部からの webhook で依頼を受けて自動起動したいとき
 
@@ -39,7 +39,7 @@
 - 何をしているか:
   - Issue 本文を `.github/ISSUE.md` に書き出す
   - `.github/issues/YYYYMMDD_{slug}.md` に日付付き履歴として保存する
-  - `pm_agent.sh`, `dev_agent.sh`, `review_agent.sh` を順に実行する
+  - `.github/scripts/agents/pm_agent.sh`, `.github/scripts/agents/dev_agent.sh`, `.github/scripts/agents/review_agent.sh` を順に実行する
 - 使いどころ:
   - GitHub 上で要件を管理したいとき
   - issue を作成して「この issue を自動処理対象にする」運用にしたいとき
@@ -59,29 +59,23 @@
 
 ## 5. `deploy-dev.yml`
 
-- 目的: 開発環境へのデプロイを実行する placeholder workflow
-- トリガー:
-  - `workflow_dispatch`（手動実行）
+- トリガー: `workflow_dispatch`（手動実行）
 - 何をしているか:
   - Azure 環境確認スクリプトを実行
-  - `echo` によるデプロイ処理のプレースホルダーを表示
-- 使いどころ:
-  - Azure App Service への dev 環境デプロイを後続で実装したいとき
+  - `.github/scripts/agents/pm_agent.sh` を実行して要件を整理
+  - `.github/scripts/agents/dev_agent.sh` を実行してテストと修正ループを回す
+  - `.github/scripts/agents/review_agent.sh` を実行してレビューを行う
 
 ## 6. `deploy-prod.yml`
 
 - 目的: 本番環境デプロイの placeholder workflow
-- トリガー:
-  - `workflow_dispatch`（手動実行）
 - 何をしているか:
   - Azure 環境確認スクリプトを実行
-  - 本番デプロイの開始位置を定義
-- 使いどころ:
+  - `.github/scripts/agents/pm_agent.sh` で要件を受け取る
   - production へのデプロイ処理を段階的に実装したいとき
 
 ## 7. `prompt-check.yml`
 
-- 目的: システムプロンプト関連ファイルの整合性チェック
 - トリガー:
   - `pull_request`
   - 変更対象パス:
