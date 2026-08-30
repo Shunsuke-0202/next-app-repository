@@ -1,0 +1,116 @@
+name: Issue Triggered Agents
+
+# このワークフローは GitHub Issue を起点にして、
+# 要件整理 → 実装 → レビューのエージェント連鎖を開始する。
+# 安全のため、必ずラベル `agent-trigger` が付いた issue のみを対象にする。
+on:
+  # GitHub の Actions 画面から手動実行できるようにする。
+  # issue のラベル判定が正しいかを確認しやすくする。
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Manual issue number for debug/test run'
+        required: false
+        default: '0'
+  # Issue が作成・編集・再オープンされたときに発火する。
+  issues:
+    types: [opened, edited, reopened, labeled]
+
+permissions:
+  # エージェントが自動修正後にコミット・プッシュできるように書き込み権限を付与
+  contents: write
+
+jobs:
+  debug-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show issue metadata
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "issue_number=${{ github.event.issue.number || github.event.inputs.issue_number || 'manual' }}"
+          echo "labels=${{ join(github.event.issue.labels.*.name, ',') || 'none' }}"
+
+  run-from-issue:
+    needs: debug-issue
+    # `agent-trigger` ラベルが付いている場合だけ実行する。
+    # `workflow_dispatch` は手動テスト用に許可する。
+    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.issue.labels.*.name, ','), 'agent-trigger')
+    runs-on: ubuntu-latest
+    env:
+      # 実装対象の app の配置場所
+      APP_DIR: app-service
+      # Dev エージェントの最大再試行回数
+      MAX_ATTEMPTS: 3
+      # 自動修正後に push できるようにする
+      AUTO_PUSH: 'true'
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 差分確認や再コミットをしやすくするため、履歴を全取得する
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # app-service が Node.js ベースの Next.js を前提としているため Node 18 を利用
+          node-version: '18'
+
+      - name: Save issue content to local requirement file
+        run: |
+          # GitHub Issue の本文を .github/ISSUE.md に保存する。
+          # PM エージェントはこのファイルを読み取り、要件として扱う。
+          mkdir -p .github .github/issues
+          python3 - <<'PY'
+          import os
+          import re
+          from datetime import datetime
+          from pathlib import Path
+
+          title = (os.environ.get('ISSUE_TITLE') or 'issue-trigger').strip() or 'issue-trigger'
+          body = os.environ.get('ISSUE_BODY') or ''
+          issue_text = body.strip() or f"# {title}\n\n自動生成された要件です。"
+
+          def slugify(value: str) -> str:
+              normalized = re.sub(r'[^a-zA-Z0-9\-\_]+', '-', value.strip())
+              normalized = normalized.strip('-')
+              return normalized[:40] or 'requirement'
+
+          date_prefix = datetime.utcnow().strftime('%Y%m%d')
+          archive_path = Path('.github/issues') / f'{date_prefix}_{slugify(issue_text)}.md'
+          counter = 1
+          while archive_path.exists():
+              archive_path = Path('.github/issues') / f'{date_prefix}_{slugify(issue_text)}_{counter}.md'
+              counter += 1
+
+          archive_path.write_text(issue_text, encoding='utf-8')
+          Path('.github/ISSUE.md').write_text(issue_text, encoding='utf-8')
+          print(f'issue archived: {archive_path}')
+          print(f'latest issue updated: .github/ISSUE.md')
+          PY
+
+      - name: Make scripts executable
+        run: |
+          # Bash のエージェントスクリプトを実行可能にする
+          chmod +x scripts/agents/*.sh || true
+
+      - name: Run PM agent
+        run: |
+          # 要件整理フェーズ: .github/ISSUE.md を読み込んで artifacts/requirements.txt を生成する
+          bash scripts/agents/pm_agent.sh
+
+      - name: Run Dev agent (tests + auto-fix loop)
+        env:
+          # GitHub Actions 上で自動 push する場合に必要なトークン
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          # 実装フェーズ: 依存のインストール、テスト、修正、再試行を行う
+          bash scripts/agents/dev_agent.sh
+
+      - name: Run Review agent
+        run: |
+          # 監査フェーズ: lint / build / 品質確認を行う
+          bash scripts/agents/review_agent.sh

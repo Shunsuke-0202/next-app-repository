@@ -12,10 +12,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,11 +51,32 @@ def read_requirement(args: argparse.Namespace) -> str:
     return requirement
 
 
+def _slugify(value: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9\-\_]+", "-", value.strip())
+    normalized = normalized.strip("-")
+    return normalized[:40] or "requirement"
+
+
 def ensure_issue_file(requirement: str) -> None:
-    issue_path = ROOT / ".github" / "ISSUE.md"
-    issue_path.parent.mkdir(parents=True, exist_ok=True)
-    issue_path.write_text(requirement, encoding="utf-8")
-    print(f"issue saved: {issue_path}")
+    archive_dir = ROOT / ".github" / "issues"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    date_prefix = datetime.utcnow().strftime("%Y%m%d")
+    base_name = f"{date_prefix}_{_slugify(requirement)}"
+    archive_path = archive_dir / f"{base_name}.md"
+    counter = 1
+    while archive_path.exists():
+        archive_path = archive_dir / f"{base_name}_{counter}.md"
+        counter += 1
+
+    archive_path.write_text(requirement, encoding="utf-8")
+
+    latest_issue = ROOT / ".github" / "ISSUE.md"
+    latest_issue.parent.mkdir(parents=True, exist_ok=True)
+    latest_issue.write_text(requirement, encoding="utf-8")
+
+    print(f"issue archived: {archive_path}")
+    print(f"latest issue updated: {latest_issue}")
 
 
 def send_webhook(requirement: str, webhook_url: str | None, token: str | None) -> bool:

@@ -2,11 +2,39 @@
 import http.server
 import socketserver
 import os
+import re
 import json
+from datetime import datetime
+from pathlib import Path
 from urllib import request, error
 
 PORT = int(os.environ.get("PORT", "8000"))
 TRIGGER_HEADER = "X-Trigger-Token"
+
+
+def _slugify(value: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9\-\_]+", "-", value.strip())
+    normalized = normalized.strip("-")
+    return normalized[:40] or "requirement"
+
+
+def _archive_issue(issue_text: str) -> str:
+    root = Path(os.getcwd())
+    archive_dir = root / '.github' / 'issues'
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    date_prefix = datetime.utcnow().strftime('%Y%m%d')
+    archive_path = archive_dir / f'{date_prefix}_{_slugify(issue_text)}.md'
+    counter = 1
+    while archive_path.exists():
+        archive_path = archive_dir / f'{date_prefix}_{_slugify(issue_text)}_{counter}.md'
+        counter += 1
+
+    archive_path.write_text(issue_text, encoding='utf-8')
+    latest_issue = root / '.github' / 'ISSUE.md'
+    latest_issue.parent.mkdir(parents=True, exist_ok=True)
+    latest_issue.write_text(issue_text, encoding='utf-8')
+    return str(archive_path)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -36,11 +64,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             payload = {}
 
         issue_text = payload.get('issue') or payload.get('title') or '# 自動生成の課題\n\n詳しい内容を記載してください。'
-
-        repo_issue_path = os.path.join(os.getcwd(), '.github', 'ISSUE.md')
-        os.makedirs(os.path.dirname(repo_issue_path), exist_ok=True)
-        with open(repo_issue_path, 'w') as f:
-            f.write(issue_text)
+        archived_path = _archive_issue(issue_text)
 
         gh_token = os.environ.get('GITHUB_TOKEN')
         gh_repo = os.environ.get('GITHUB_REPO')
@@ -58,15 +82,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 with request.urlopen(req) as resp:
                     if resp.status in (200, 201, 204):
                         self._set_response(200)
-                        self.wfile.write(json.dumps({"status": "dispatched"}).encode())
+                        self.wfile.write(json.dumps({"status": "dispatched", "issue_path": archived_path}).encode())
                         return
             except error.HTTPError as e:
                 self._set_response(500)
-                self.wfile.write(json.dumps({"error": e.reason, "code": e.code}).encode())
+                self.wfile.write(json.dumps({"error": e.reason, "code": e.code, "issue_path": archived_path}).encode())
                 return
 
         self._set_response(200)
-        self.wfile.write(json.dumps({"status": "ok", "note": "Wrote .github/ISSUE.md"}).encode())
+        self.wfile.write(json.dumps({"status": "ok", "note": f"Archived issue to {archived_path}", "issue_path": archived_path}).encode())
 
 
 def run():
