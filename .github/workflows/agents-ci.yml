@@ -41,8 +41,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # app-service は Node.js ベースの Next.js を想定している
-          node-version: '18'
+          # app-service は Next 16 を利用しているため Node 20 以上が必要
+          node-version: '20'
 
       - name: Make scripts executable
         run: |

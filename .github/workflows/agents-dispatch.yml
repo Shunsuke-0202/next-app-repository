@@ -37,8 +37,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # app-service が Next.js 前提のため Node.js 18 を利用
-          node-version: '18'
+          # app-service が Next.js 16 を利用しているため Node.js 20 を利用
+          node-version: '20'
 
       - name: Make scripts executable
         run: chmod +x scripts/agents/*.sh || true

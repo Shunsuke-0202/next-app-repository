@@ -55,8 +55,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # app-service が Node.js ベースの Next.js を前提としているため Node 18 を利用
-          node-version: '18'
+          # app-service が Next.js 16 を利用しているため Node 20 を利用
+          node-version: '20'
 
       - name: Save issue content to local requirement file
         run: |
