@@ -1,6 +1,12 @@
 name: Agents CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual reason for the agent run'
+        required: false
+        default: 'manual-trigger'
   pull_request:
   push:
     branches:
