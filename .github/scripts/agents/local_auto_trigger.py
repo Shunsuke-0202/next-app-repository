@@ -17,14 +17,16 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 def find_repo_root(start: Path | None = None) -> Path:
     p = (start or Path(__file__)).resolve().parent
-    for _ in range(10):
-        if (p / '.git').exists() or (p / 'README.md').exists():
+    for _ in range(20):
+        if (p / '.git').exists():
+            return p
+        if (p / 'Makefile').exists() or (p / 'package.json').exists() or (p / 'pyproject.toml').exists():
             return p
         if p.parent == p:
             break
@@ -73,7 +75,7 @@ def ensure_issue_file(requirement: str) -> None:
     archive_dir = ROOT / ".github" / "issues"
     archive_dir.mkdir(parents=True, exist_ok=True)
 
-    date_prefix = datetime.utcnow().strftime("%Y%m%d")
+    date_prefix = datetime.now(timezone.utc).strftime("%Y%m%d")
     base_name = f"{date_prefix}_{_slugify(requirement)}"
     archive_path = archive_dir / f"{base_name}.md"
     counter = 1
