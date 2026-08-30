@@ -2,60 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
-
-type EntryType = "income" | "expense";
-
-type Entry = {
-  id: string;
-  date: string;
-  type: EntryType;
-  category: string;
-  amount: number;
-  note: string;
-  createdAt: string;
-};
-
-type EntryDraft = {
-  date: string;
-  type: EntryType;
-  category: string;
-  amount: number;
-  note: string;
-};
-
-const STORAGE_KEY = "household-budget-entries-v1";
-const incomeCategories = ["給与", "副収入", "投資", "その他"];
-const expenseCategories = ["食費", "住居", "交通", "光熱費", "通信", "医療", "教育", "娯楽", "美容", "その他"];
-
-function getTodayString() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getDefaultDraft(): EntryDraft {
-  return {
-    date: getTodayString(),
-    type: "expense",
-    category: "食費",
-    amount: 0,
-    note: "",
-  };
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function buildCategoryOptions(type: EntryType) {
-  return type === "income" ? incomeCategories : expenseCategories;
-}
+import {
+  type Entry,
+  type EntryType,
+  type EntryDraft,
+  STORAGE_KEY,
+  getDefaultDraft,
+  formatCurrency,
+  buildCategoryOptions,
+} from "./utils";
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>(() => {
