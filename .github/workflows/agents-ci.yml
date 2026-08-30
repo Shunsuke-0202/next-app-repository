@@ -1,53 +1,69 @@
 name: Agents CI
 
+# このワークフローは、PM / Dev / Review の3段階エージェントを順に実行する。
+# 目的: 開発依頼を受けた後、要件整理 → 実装 → レビュー → 修正ループを CI 上で回す。
 on:
+  # 手動実行を許可する。GitHub の Actions 画面から Run workflow を押せる。
   workflow_dispatch:
     inputs:
       reason:
         description: 'Manual reason for the agent run'
         required: false
         default: 'manual-trigger'
+  # PR が作成・更新されたときに実行
   pull_request:
+  # push 時に実行。ブランチに紐づく自動チェックを行う
   push:
     branches:
       - '**'
 
 permissions:
+  # エージェントが自動修正後にコミットする可能性があるため write 権限を付与
   contents: write
 
 jobs:
   run-agents:
     runs-on: ubuntu-latest
     env:
+      # 対象アプリケーションの場所を指定
       APP_DIR: app-service
+      # Dev エージェントの最大再試行回数
       MAX_ATTEMPTS: 3
+      # 自動修正後に push を許可するか
       AUTO_PUSH: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # 全履歴を取得して、必要に応じてコミットや差分確認をしやすくする
           fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+          # app-service は Node.js ベースの Next.js を想定している
           node-version: '18'
 
       - name: Make scripts executable
         run: |
+          # エージェント用 Bash スクリプトの実行権を付与する
           chmod +x scripts/agents/*.sh || true
 
       - name: Run PM agent
         run: |
+          # 要件整理フェーズ: .github/ISSUE.md から課題を読み込み、requirements.txt を生成する
           bash scripts/agents/pm_agent.sh
 
       - name: Run Dev agent (tests + auto-fix loop)
         env:
+          # GitHub Actions から自動プッシュを行う場合に必要
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
+          # 実装フェーズ: テスト実行、失敗時の自動修正、再試行のループを実行する
           bash scripts/agents/dev_agent.sh
 
       - name: Run Review agent
         run: |
+          # レビュー/検証フェーズ: lint / build などの確認を行う
           bash scripts/agents/review_agent.sh

@@ -1,8 +1,12 @@
 name: CI
 
+# このワークフローはリポジトリの最低限の品質チェックを行う。
+# 目的: 構造破壊や基本的な静的チェックの早期発見。
 on:
+  # main / master への push で実行
   push:
     branches: [main, master]
+  # PR でも実行
   pull_request:
 
 jobs:
@@ -13,7 +17,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate repo structure
-        run: bash .github/scripts/validate-repo.sh
+        run: |
+          # リポジトリ構造の基本ルールを確認する
+          bash .github/scripts/validate-repo.sh
 
       - name: Run lint checks
-        run: bash .github/scripts/lint.sh
+        run: |
+          # シンプルな静的チェックを実行する
+          bash .github/scripts/lint.sh

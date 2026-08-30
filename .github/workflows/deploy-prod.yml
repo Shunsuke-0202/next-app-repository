@@ -1,6 +1,9 @@
 name: Deploy App Service (Prod)
 
+# 本番環境デプロイ用ワークフロー。
+# 本番運用では承認フローや安全チェックを追加する想定。
 on:
+  # GitHub の UI から手動実行する
   workflow_dispatch:
 
 jobs:
@@ -11,9 +14,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Azure environment validation
-        run: bash .github/scripts/azure-check.sh
+        run: |
+          # 本番用の前提条件チェックを実行する
+          bash .github/scripts/azure-check.sh
 
       - name: Placeholder deployment
         run: |
+          # 本番デプロイコマンドを追加する場所
           echo "Deploy to App Service (prod)"
           echo "Add Azure login and deployment commands here."

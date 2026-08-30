@@ -1,8 +1,12 @@
 name: Agents Dispatch
 
+# このワークフローは webhook や外部からの dispatch を受けて、
+# エージェントの実行を開始するための入口として使う。
 on:
+  # GitHub から repository_dispatch を受け取る
   repository_dispatch:
     types: [run-agents]
+  # GitHub の UI から手動実行も可能
   workflow_dispatch:
     inputs:
       run:
@@ -10,24 +14,30 @@ on:
         required: false
 
 permissions:
+  # 自動修正と push を許可するために書き込み権限を付与
   contents: write
 
 jobs:
   run-agents:
     runs-on: ubuntu-latest
     env:
+      # 実装対象アプリのディレクトリ
       APP_DIR: app-service
+      # 再試行回数
       MAX_ATTEMPTS: 3
+      # 自動修正後に push を試すか
       AUTO_PUSH: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # push 後の差分確認や再コミットを行いやすくするために全履歴取得
           fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+          # app-service が Next.js 前提のため Node.js 18 を利用
           node-version: '18'
 
       - name: Make scripts executable
