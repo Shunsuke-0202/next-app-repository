@@ -74,19 +74,7 @@
   - `.github/scripts/agents/pm_agent.sh` で要件を受け取る
   - production へのデプロイ処理を段階的に実装したいとき
 
-## 7. `prompt-check.yml`
-
-- トリガー:
-  - `pull_request`
-  - 変更対象パス:
-    - `.github/system_prompt.txt`
-    - `docs/prompting_system_prompt.md`
-    - `docs/prompting.md`
-    - `docs/runbooks/ai.md`
-- 何をしているか:
-  - `.github/scripts/check-system-prompt.sh` を実行してプロンプトの規約チェックを行う
-- 使いどころ:
-  - LLM 用プロンプトや関連ドキュメントが破損していないかを確認したいとき
+<!-- prompt-check workflow removed (project does not use AI/LLM) -->
 
 ## 運用メモ
 

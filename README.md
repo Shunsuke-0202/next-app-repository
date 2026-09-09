@@ -78,15 +78,6 @@ GitHub Pages への公開手順、再デプロイ、障害確認、別チャッ�
 - インフラは infra/bicep で宣言的に定義する
 - 本番・開発の差分は env/dev などの parameter で管理する
 
-## LLM / システムプロンプト
+## ドキュメントと運用
 
-このプロジェクトでは LLM を利用する際の共通ルールを `docs/prompting_system_prompt.md` に定義し、ランタイムや CI が読み込めるプレーンテキスト版を `.github/system_prompt.txt` に配置しています。
-
-使い方の例（ランタイムでファイルを読み込んでシステムプロンプトとして注入する場合）:
-
-```bash
-# シンプルな例: システムプロンプトを標準入力に渡す
-cat .github/system_prompt.txt | your-llm-client --system-prompt - --input "ユーザーの質問"
-```
-
-ドキュメント管理および運用ルールの詳細は `docs/prompting_system_prompt.md` を参照してください。
+プロジェクト内の運用や設計の手順は `docs/` 配下にまとめています。デプロイ手順、アーキテクチャの説明、ランブック等を参照してください。
