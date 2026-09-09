@@ -76,3 +76,13 @@ bash ./scripts/deploy-appservice.sh
 ```
 
 ローカル開発をベースにし、完成した状態でそのまま Azure にデプロイできる流れを想定しています。
+
+## 5. GitHub Pages への無料デプロイ
+
+このアプリはブラウザの `localStorage` だけを使う静的アプリのため、GitHub Pages に追加の常時稼働コストなしで公開できます。
+
+1. `main` ブランチへ push する、または GitHub Actions の `Deploy Next.js to GitHub Pages` を手動実行する。
+2. GitHub リポジトリの Settings > Pages で、公開元を `GitHub Actions` に設定する（初回のみ）。
+3. デプロイ完了後、`https://<GitHubユーザー名>.github.io/next-app-repository/` を開く。
+
+GitHub Pages の公式制限として、公開サイトは 1 GB 以下、帯域は月 100 GB が soft limit です。データはブラウザごとの `localStorage` に保存されるため、端末やブラウザをまたいだ同期、認証、サーバー側バックアップはありません。
