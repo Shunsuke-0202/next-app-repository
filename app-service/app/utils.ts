@@ -26,12 +26,51 @@ export const STORAGE_KEY = "household-budget-entries-v1";
 export const incomeCategories = ["給与", "副収入", "投資", "その他"];
 export const expenseCategories = ["食費", "住居", "交通", "光熱費", "通信", "医療", "教育", "娯楽", "美容", "その他"];
 
+export function isValidEntry(value: unknown): value is Entry {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const entry = value as Partial<Entry>;
+  const categories = buildCategoryOptions(entry.type as EntryType);
+  return (
+    typeof entry.id === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(entry.date ?? "") &&
+    (entry.type === "income" || entry.type === "expense") &&
+    typeof entry.category === "string" &&
+    categories.includes(entry.category) &&
+    typeof entry.amount === "number" &&
+    Number.isFinite(entry.amount) &&
+    Number.isInteger(entry.amount) &&
+    entry.amount > 0 &&
+    typeof entry.note === "string" &&
+    typeof entry.createdAt === "string"
+  );
+}
+
+export function parseStoredEntries(value: string | null): Entry[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(isValidEntry) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function getTodayString(): string {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function getCurrentMonthString(): string {
+  return getTodayString().slice(0, 7);
 }
 
 export function getDefaultDraft(): EntryDraft {

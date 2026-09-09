@@ -8,8 +8,10 @@ import {
   type EntryDraft,
   STORAGE_KEY,
   getDefaultDraft,
+  getCurrentMonthString,
   formatCurrency,
   buildCategoryOptions,
+  parseStoredEntries,
   parseVoiceCommand,
 } from "./utils";
 
@@ -39,19 +41,13 @@ export default function Home() {
 
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        return [];
-      }
-
-      const parsed = JSON.parse(saved) as Entry[];
-      return Array.isArray(parsed) ? parsed : [];
+      return parseStoredEntries(saved);
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
       return [];
     }
   });
   const [draft, setDraft] = useState<EntryDraft>(getDefaultDraft());
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthString);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [voiceText, setVoiceText] = useState("");
   const [voiceStatus, setVoiceStatus] = useState("");
@@ -93,7 +89,7 @@ export default function Home() {
 
     for (const entry of filteredEntries) {
       const current = map.get(entry.category) ?? 0;
-      map.set(entry.category, current + entry.amount * (entry.type === "expense" ? 1 : -1));
+      map.set(entry.category, current + entry.amount * (entry.type === "income" ? 1 : -1));
     }
 
     return Array.from(map.entries())
@@ -130,7 +126,14 @@ export default function Home() {
 
   const saveDraftEntry = (entryDraft: EntryDraft) => {
     const amount = Number(entryDraft.amount);
-    if (!entryDraft.date || !entryDraft.category || Number.isNaN(amount) || amount <= 0) {
+    if (
+      !entryDraft.date ||
+      !entryDraft.category ||
+      !Number.isFinite(amount) ||
+      !Number.isInteger(amount) ||
+      amount <= 0 ||
+      amount > 1_000_000_000
+    ) {
       setVoiceStatus("日付・カテゴリ・金額を確認してください");
       return false;
     }
@@ -173,6 +176,10 @@ export default function Home() {
   };
 
   const handleDelete = (id: string) => {
+    if (!window.confirm("この収支を削除しますか？")) {
+      return;
+    }
+
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
     if (editingId === id) {
       resetForm();
@@ -222,14 +229,6 @@ export default function Home() {
       } as EntryDraft;
 
       applyParsedDraft(nextDraft);
-      const mergedDraft = {
-        ...getDefaultDraft(),
-        ...draft,
-        ...nextDraft,
-      } as EntryDraft;
-
-      saveDraftEntry(mergedDraft);
-      setVoiceText("");
     };
 
     recognition.onerror = () => {
@@ -260,12 +259,11 @@ export default function Home() {
     } as EntryDraft;
 
     applyParsedDraft(mergedDraft);
-    saveDraftEntry(mergedDraft);
-    setVoiceText("");
+    setVoiceStatus("音声内容を確認してから「追加する」を押してください");
   };
 
   return (
-    <div className={styles.page}>
+    <main className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.header}>
           <div>
@@ -276,6 +274,7 @@ export default function Home() {
           <label className={styles.monthPicker}>
             <span>表示月</span>
             <input
+              aria-label="表示月"
               type="month"
               value={selectedMonth}
               onChange={(event) => setSelectedMonth(event.target.value)}
@@ -315,6 +314,7 @@ export default function Home() {
               <label className={styles.field}>
                 <span>日付</span>
                 <input
+                  required
                   type="date"
                   value={draft.date}
                   onChange={(event) => handleDraftChange("date", event.target.value)}
@@ -324,6 +324,7 @@ export default function Home() {
               <label className={styles.field}>
                 <span>種別</span>
                 <select
+                  required
                   value={draft.type}
                   onChange={(event) => {
                     const nextType = event.target.value as EntryType;
@@ -340,6 +341,7 @@ export default function Home() {
               <label className={styles.field}>
                 <span>カテゴリ</span>
                 <select
+                  required
                   value={draft.category}
                   onChange={(event) => handleDraftChange("category", event.target.value)}
                 >
@@ -354,6 +356,7 @@ export default function Home() {
               <label className={styles.field}>
                 <span>金額</span>
                 <input
+                  required
                   type="number"
                   min="1"
                   step="1"
@@ -378,6 +381,7 @@ export default function Home() {
                   <span>音声入力</span>
                   <div className={styles.voiceInputField}>
                     <input
+                      aria-label="音声または自然文"
                       type="text"
                       value={voiceText}
                       onChange={(event) => setVoiceText(event.target.value)}
@@ -393,7 +397,7 @@ export default function Home() {
                   </div>
                 </label>
                 <div className={styles.voiceHint}>例: 「食費で1200円使った」 / 「給与280000円入った」</div>
-                <div className={`${styles.voiceStatus} ${voiceStatus ? "" : styles.voiceStatusError}`}>
+                <div role="status" aria-live="polite" className={`${styles.voiceStatus} ${voiceStatus ? "" : styles.voiceStatusError}`}>
                   {voiceStatus || "音声入力を使うと、何に・いくら使ったかを自動で登録できます"}
                 </div>
               </div>
@@ -474,6 +478,6 @@ export default function Home() {
           </ul>
         </section>
       </div>
-    </div>
+    </main>
   );
 }

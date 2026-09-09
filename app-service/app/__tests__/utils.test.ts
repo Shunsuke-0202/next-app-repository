@@ -7,6 +7,7 @@ import {
   incomeCategories,
   expenseCategories,
   parseVoiceCommand,
+  parseStoredEntries,
 } from "../utils";
 
 describe("Utility Functions", () => {
@@ -191,6 +192,38 @@ describe("Utility Functions", () => {
       const parsed = parseVoiceCommand("食費を使った");
       expect(parsed.ok).toBe(false);
       expect(parsed.error).toContain("金額");
+    });
+  });
+
+  describe("parseStoredEntries", () => {
+    const validEntry = {
+      id: "1",
+      date: "2026-09-01",
+      type: "expense" as const,
+      category: "食費",
+      amount: 1200,
+      note: "昼食",
+      createdAt: "2026-09-01T12:00:00.000Z",
+    };
+
+    it("returns valid entries from JSON", () => {
+      expect(parseStoredEntries(JSON.stringify([validEntry]))).toEqual([validEntry]);
+    });
+
+    it("drops malformed entries while keeping valid entries", () => {
+      expect(parseStoredEntries(JSON.stringify([validEntry, { ...validEntry, amount: -1 }]))).toEqual([validEntry]);
+    });
+
+    it("returns an empty list for invalid JSON", () => {
+      expect(parseStoredEntries("not-json")).toEqual([]);
+    });
+
+    it("returns an empty list for non-array JSON", () => {
+      expect(parseStoredEntries(JSON.stringify({ ...validEntry }))).toEqual([]);
+    });
+
+    it("returns an empty list when storage is empty", () => {
+      expect(parseStoredEntries(null)).toEqual([]);
     });
   });
 });
