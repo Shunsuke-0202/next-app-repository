@@ -10,13 +10,25 @@
   - 日本語金額表現（例: 「1万円使った」）
   - 金額なしでのエラー処理
 
+## 実装: 保存データ検証と集計改善
+
+- 対象関数: `parseStoredEntries`, `calculateSummary`
+- テストケース数: 8
+- 主なカバー範囲:
+  - 正常な `localStorage` JSON の復元
+  - 不正なエントリの除外と正常データの保持
+  - 不正JSON、非配列、空ストレージ
+  - 月別の収入・支出・残額集計
+
 ## 検証値
 - 1200 -> 1200円として認識
 - 280000 -> 280000円として認識
 - 1万円 -> 10000円として変換
 - 例外ケース: 数字なし -> `ok: false`
+- 不正エントリ: 負数金額 -> 除外
+- 不正ストレージ: `not-json` -> 空配列
 
 ## 実行結果
-- `npm test -- --runInBand app/__tests__/utils.test.ts` で 18/18 通過
+- `npm test -- --runInBand app/__tests__/utils.test.ts` で 23/23 通過
 - `npm run lint` でエラーなし
 - `npm run build` で成功

@@ -67,6 +67,10 @@ make validate
 make lint
 ```
 
+## デプロイ
+
+GitHub Pages への公開手順、再デプロイ、障害確認、別チャット用の依頼テンプレートは [docs/runbooks/deploy.md](docs/runbooks/deploy.md) にまとめています。
+
 ## 運用方針
 
 - 共通ルールと自動化は .github で管理する
