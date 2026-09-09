@@ -2,6 +2,19 @@
 
 ローカル開発と Azure App Service へのデプロイを両立する構成です。
 
+## 0. このアプリについて
+
+このアプリは、個人向けの家計簿管理を目的としたシンプルな Web アプリです。
+
+- 収入・支出の登録
+- 日付、カテゴリ、金額、メモの管理
+- 収支一覧の表示と編集・削除
+- 月次の収入・支出・残高の集計
+- カテゴリ別の内訳表示
+- ブラウザの `localStorage` によるデータ保存
+
+MVP として外部バックエンドや認証は使わず、ローカルですぐに利用できる構成にしています。
+
 ## 1. ローカル開発
 
 ### 直接実行
@@ -63,3 +76,13 @@ bash ./scripts/deploy-appservice.sh
 ```
 
 ローカル開発をベースにし、完成した状態でそのまま Azure にデプロイできる流れを想定しています。
+
+## 5. GitHub Pages への無料デプロイ
+
+このアプリはブラウザの `localStorage` だけを使う静的アプリのため、GitHub Pages に追加の常時稼働コストなしで公開できます。
+
+1. `main` ブランチへ push する、または GitHub Actions の `Deploy Next.js to GitHub Pages` を手動実行する。
+2. GitHub リポジトリの Settings > Pages で、公開元を `GitHub Actions` に設定する（初回のみ）。
+3. デプロイ完了後、`https://<GitHubユーザー名>.github.io/next-app-repository/` を開く。
+
+GitHub Pages の公式制限として、公開サイトは 1 GB 以下、帯域は月 100 GB が soft limit です。データはブラウザごとの `localStorage` に保存されるため、端末やブラウザをまたいだ同期、認証、サーバー側バックアップはありません。
