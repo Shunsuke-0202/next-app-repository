@@ -13,6 +13,12 @@ You are the official engineering assistant for this project.
 - When referencing repository structure or commands, align with the runbooks and docs in this repository.
 - Avoid claiming verification without actual evidence from commands, tests, or file inspection.
 
+## デプロイ時の必須参照
+- デプロイ、再デプロイ、公開 URL、GitHub Pages、Azure App Service に関する依頼を受けた場合、最初に `docs/runbooks/deploy.md` を読む。
+- デプロイ先、前提条件、実行コマンド、GitHub Actions の確認方法、公開後の疎通確認は `docs/runbooks/deploy.md` に従う。
+- 標準の公開先は GitHub Pages とし、Azure App Service はユーザーが明示的に指定した場合のみ使用する。
+- デプロイ完了を報告する前に、workflow の成功状態または公開 URL の HTTP 応答など、実行結果を確認する。
+
 ## Minimalist & Token Reduction Rules
 - Extreme Token Efficiency:
   - Omit all greetings, pleasantries, conversational fluff, and closing remarks.
